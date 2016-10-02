@@ -4,34 +4,90 @@
   var search = document.getElementById('search')
   var loading = document.getElementById('loading')
 
-  console.log(loading)
-
   var reposUrl = function (organization) {
-    return [ api, 'orgs', organization, 'repos?per_page=100' ].join('/')
+    return `${api}/orgs/${organization}/repos?access_token=971392b1942ed010f7f0dda8310b9d04baffff33&per_page=100`
   }
 
-  var collaboratorsUrl = function (repo) {
-    return [ api, 'repos', repo.owner.login, repo.name, 'collaborators' ].join('/')
+  var forksUrl = function (repo) {
+    return `${api}/repos/${repo.owner.login}/${repo.name}/forks?access_token=971392b1942ed010f7f0dda8310b9d04baffff33`
   }
 
   var responseToJson = function (res) {
     return res.json()
   }
 
-  var fetchRepositories = function (organization) {
-    return fetch(reposUrl(organization))
-      .then(responseToJson)
+  var buildErrorHandler = function (tag) {
+    return new function (err) {
+      console.error(tag + ': ' + err)
+    }
   }
 
-  var filterRepositoriesProperties = function (repositories) {
-    return repositories.map(filterRepositoryProperties)
+  var pickRepositoryData = function (repos) {
+    return repos.map(function (repo) {
+      return {
+        name: repo.name,
+        owner: repo.owner
+       }
+    })
+  }
+
+  var pickForkData = function (forks) {
+    return forks.map(function (fork) {
+      return {
+        fullName: fork.full_name,
+      }
+    })
+  }
+
+  var mergeFork = function (repo) {
+    return function (forks) {
+      return {
+        name: repo.name,
+        owner: repo.owner,
+        forks: forks
+      }
+    }
+  }
+
+  var fetchData = function (organization) {
+    return fetchRepositories(organization)
+      .then(attachForks)
+  }
+
+  var attachForks = function (repos) {
+    if (!repos) return Promise.reject('No repos to attach fork!')
+
+    return Promise.map(repos, function (repo) {
+      return fetch(forksUrl(repo))
+        .then(responseToJson)
+        .then(pickForkData)
+        .then(mergeFork(repo))
+    })
+  }
+
+  var fetchRepositories = function (organization) {
+    if (!organization) return Promise.reject('No organization!')
+
+    return fetch(reposUrl(organization))
+      .then(responseToJson)
+      .then(pickRepositoryData)
+  }
+
+  var renderFork = function (fork) {
+    return '<li>' + fork.fullName + '</li>'
   }
 
   var renderRepository = function (repo) {
+    var forks = repo.forks.length > 0 ?
+      '<ul>' +
+        repo.forks.map(renderFork).join('') +
+      '</ul>' : ''
+
     return (
-      '<div class="repository">' +
+      '<li>' +
         '<h3>' + repo.name + '</h3>' +
-      '</div>'
+        forks +
+      '</li>'
     )
   }
 
@@ -48,9 +104,10 @@
   }
 
   var updateSearch = function (organization) {
-    return fetchRepositories(organization)
+    return fetchData(organization)
       .then(renderRepositories)
       .then(updateTarget)
+      .catch(buildErrorHandler('update search'))
   }
 
   var updateLoadingState = function (isLoading) {
@@ -64,6 +121,7 @@
   }
 
   var handleError = function (error) {
+    console.dir(error)
     updateLoadingState(false)
     updateTarget('No matches')
   }

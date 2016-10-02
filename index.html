@@ -1,21 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>I promise</title>
-    <link rel="stylesheet"
-          href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"
-          integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7"
-          crossorigin="anonymous">
+  <title>I promise</title>
+  <link rel="stylesheet" href="https://cdn.rawgit.com/mblode/marx/master/css/marx.min.css">
 </head>
 <body>
+  <main>
     <section class="container">
         <h1>Organization repositories</h1>
+        <label for="search">Search </label>
         <input id="search" type="text">
-        <img id="loading" src="spinner.gif" style="display: none"/>
+        <img id="loading" src="spinner.gif" style="display: none; vertical-align: middle"/>
         <div id="target">
         </div>
     </section>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/1.0.0/fetch.min.js"></script>
-    <script src="index.js"></script>
+  </main>
+  <script src="https://cdn.jsdelivr.net/bluebird/latest/bluebird.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fetch/1.0.0/fetch.min.js"></script>
+  <script src="index.js"></script>
 </body>
 </html>
