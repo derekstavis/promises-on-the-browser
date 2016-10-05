@@ -12,14 +12,34 @@
     return `${api}/repos/${repo.owner.login}/${repo.name}/forks?access_token=971392b1942ed010f7f0dda8310b9d04baffff33`
   }
 
+  var throwTimeoutError = function () {
+    return Promise.reject(new Error('Request timed out'))
+  }
+
+  var buildTimeout =  function (delay) {
+    return Promise.delay(delay)
+      .then(throwTimeoutError)
+  }
+
+  var handleReturnCode = function (req) {
+    if (req.ok) {
+      return req
+    } 
+    
+    throw new Error(req.statusText)
+  }
+
   var responseToJson = function (res) {
     return res.json()
   }
 
-  var buildErrorHandler = function (tag) {
-    return new function (err) {
-      console.error(tag + ': ' + err)
-    }
+  var request = function (...args) {
+    return Promise.race([
+      buildTimeout(1000),
+      fetch(...args)
+        .then(handleReturnCode)  
+        .then(responseToJson)
+    ]) 
   }
 
   var pickRepositoryData = function (repos) {
@@ -58,8 +78,7 @@
     if (!repos) return Promise.reject('No repos to attach fork!')
 
     return Promise.map(repos, function (repo) {
-      return fetch(forksUrl(repo))
-        .then(responseToJson)
+      return request(forksUrl(repo))
         .then(pickForkData)
         .then(mergeFork(repo))
     })
@@ -68,9 +87,9 @@
   var fetchRepositories = function (organization) {
     if (!organization) return Promise.reject('No organization!')
 
-    return fetch(reposUrl(organization))
-      .then(responseToJson)
+    return request(reposUrl(organization))
       .then(pickRepositoryData)
+      .catch(handleError)
   }
 
   var renderFork = function (fork) {
@@ -107,7 +126,7 @@
     return fetchData(organization)
       .then(renderRepositories)
       .then(updateTarget)
-      .catch(buildErrorHandler('update search'))
+      .catch(handleError)
   }
 
   var updateLoadingState = function (isLoading) {
@@ -121,9 +140,9 @@
   }
 
   var handleError = function (error) {
-    console.dir(error)
     updateLoadingState(false)
-    updateTarget('No matches')
+    console.dir(error)
+    updateTarget(error.message || "No match")
   }
 
   var handleSuccess = function (error) {
